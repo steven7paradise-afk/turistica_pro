@@ -16,11 +16,24 @@ import {
 } from "@/app/turnistica/_lib/types";
 
 async function parse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Errore API" }));
-    throw new Error(error.error || "Errore API");
+  const raw = await response.text();
+  let payload: { error?: string } | null = null;
+
+  try {
+    payload = raw ? (JSON.parse(raw) as { error?: string }) : null;
+  } catch {
+    payload = null;
   }
-  return (await response.json()) as T;
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `Errore API (${response.status})`);
+  }
+
+  if (!raw) {
+    throw new Error("Risposta API vuota");
+  }
+
+  return (payload as T) ?? (JSON.parse(raw) as T);
 }
 
 export class ShiftApiError extends Error {
