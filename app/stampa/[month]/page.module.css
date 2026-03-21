@@ -137,6 +137,39 @@
   width: 100%;
 }
 
+.focusStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  margin: 0 0 10px;
+}
+
+.focusChip,
+.focusNote {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff8fb;
+  color: var(--ink);
+  min-height: 34px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.focusNote {
+  max-width: min(100%, 560px);
+  border-radius: 18px;
+  justify-content: flex-start;
+  text-align: left;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
 .legendChip {
   display: inline-flex;
   align-items: center;
@@ -331,6 +364,23 @@
     gap: 2mm;
     margin-bottom: 2mm;
     font-size: 6.3pt;
+  }
+
+  .focusStrip {
+    gap: 2mm;
+    margin-bottom: 2.4mm;
+  }
+
+  .focusChip,
+  .focusNote {
+    min-height: auto;
+    padding: 1.2mm 2mm;
+    font-size: 6.2pt;
+  }
+
+  .focusNote {
+    max-width: 110mm;
+    border-radius: 3mm;
   }
 
   .legendChip {

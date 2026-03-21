@@ -72,8 +72,10 @@ function cellStyle(schedule: ScheduleData, employeeId: string, dateISO: string) 
   };
 }
 
-function groupEmployees(schedule: ScheduleData, dateISO: string) {
-  const active = schedule.employees.filter((employee) => employee.active);
+function groupEmployees(schedule: ScheduleData, dateISO: string, selectedEmployeeId?: string) {
+  const active = selectedEmployeeId
+    ? schedule.employees.filter((employee) => employee.active && employee.id === selectedEmployeeId)
+    : schedule.employees.filter((employee) => employee.active);
 
   const buildGroup = (store: Store) => ({
     key: store,
@@ -122,7 +124,7 @@ export default async function PrintMonthPage({
   searchParams
 }: {
   params: { month: string };
-  searchParams?: { ref?: string };
+  searchParams?: { ref?: string; employeeId?: string };
 }) {
   const session = await getAppSession();
   if (!session?.user) {
@@ -136,8 +138,13 @@ export default async function PrintMonthPage({
   const schedule = await getLocalSchedule(params.month);
   const dates = monthDates(params.month);
   const referenceDateISO = referenceDateForMonth(dates, searchParams?.ref);
-  const groups = groupEmployees(schedule, referenceDateISO);
-  const activeEmployees = schedule.employees.filter((employee) => employee.active);
+  const selectedEmployee =
+    typeof searchParams?.employeeId === "string"
+      ? schedule.employees.find((employee) => employee.active && employee.id === searchParams.employeeId) ?? null
+      : null;
+  const selectedRule = selectedEmployee ? schedule.rules.find((rule) => rule.employeeId === selectedEmployee.id) ?? null : null;
+  const groups = groupEmployees(schedule, referenceDateISO, selectedEmployee?.id);
+  const activeEmployees = selectedEmployee ? [selectedEmployee] : schedule.employees.filter((employee) => employee.active);
   const printScale = getPrintScale(activeEmployees.length, dates.length, groups.filter((group) => group.employees.length > 0).length || 1);
   const legend = legendItems(schedule);
 
@@ -166,10 +173,21 @@ export default async function PrintMonthPage({
               <span className={styles.brandMark}>Tp</span>
               <div>
                 <span className={styles.kicker}>Paradise Studio</span>
-                <h1 className={styles.title}>TABELLA TURNISTICA ({formatMonthLabel(params.month).toUpperCase()})</h1>
+                <h1 className={styles.title}>
+                  {selectedEmployee ? `SCHEDA DISPONIBILITA (${formatMonthLabel(params.month).toUpperCase()})` : `TABELLA TURNISTICA (${formatMonthLabel(params.month).toUpperCase()})`}
+                </h1>
               </div>
             </div>
           </div>
+
+          {selectedEmployee ? (
+            <div className={styles.focusStrip}>
+              <span className={styles.focusChip}>{selectedEmployee.fullName}</span>
+              <span className={styles.focusChip}>{STORE_LABELS[selectedEmployee.homeStore]}</span>
+              <span className={styles.focusChip}>{hoursByEmployee[selectedEmployee.id]} h nel mese</span>
+              <span className={styles.focusNote}>{selectedRule?.note?.trim() || "Nessuna nota persona"}</span>
+            </div>
+          ) : null}
 
           <div className={styles.legendRow}>
             <span>Legenda:</span>

@@ -3,11 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import availabilityStyles from "@/app/turnistica/_components/availability.module.css";
 import { EmployeeAvatar } from "@/app/turnistica/_components/EmployeeAvatar";
 import studioStyles from "@/app/turnistica/_components/studio.module.css";
-import { getSchedule, updateEmployee } from "@/app/turnistica/_lib/api";
-import type { AvailabilityStatus, AssignmentMatrix, Employee, SaveState, ScheduleData, SessionUser, Store } from "@/app/turnistica/_lib/types";
+import { getSchedule, updateEmployee, upsertRule } from "@/app/turnistica/_lib/api";
+import type { AvailabilityStatus, AssignmentMatrix, Employee, EmployeeRule, SaveState, ScheduleData, SessionUser, Store } from "@/app/turnistica/_lib/types";
 import {
   AVAILABILITY_LABELS,
+  assignmentHours,
+  formatHours,
   formatMonthLabel,
+  getEffectiveAssignmentForDate,
   getAvailabilityStatusForDate,
   isWeekend,
   monthDates,
@@ -71,6 +74,19 @@ type Props = {
   initialSchedule: ScheduleData;
 };
 
+function defaultQuickDate(monthKey: string, dates: string[]) {
+  const today = toMonthKey(new Date()) === monthKey ? new Date() : null;
+  const todayISO = today
+    ? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
+    : "";
+
+  if (todayISO && dates.includes(todayISO)) {
+    return todayISO;
+  }
+
+  return dates[0] ?? "";
+}
+
 function saveStateLabel(saveState: SaveState, lastSavedAt: string) {
   if (saveState === "saving") return "Salvataggio in corso";
   if (saveState === "saved") return `Salvato ${lastSavedAt}`;
@@ -92,16 +108,20 @@ function groupByHomeStore(employees: Employee[]): Array<{ store: Store; title: s
 export function AvailabilityStudio({ user, initialSchedule }: Props) {
   const [monthKey, setMonthKey] = useState(initialSchedule.monthKey);
   const [employees, setEmployees] = useState<Employee[]>(initialSchedule.employees.filter((employee) => employee.active));
+  const [rules, setRules] = useState<EmployeeRule[]>(initialSchedule.rules);
   const [assignments, setAssignments] = useState<AssignmentMatrix>(initialSchedule.assignments);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [lastSavedAt, setLastSavedAt] = useState(new Date(initialSchedule.updatedAt).toLocaleTimeString("it-IT"));
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("ALL");
+  const [employeeNote, setEmployeeNote] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
   const initializedRef = useRef(false);
 
   const readOnly = user.role === "STAFF";
   const dates = useMemo(() => monthDates(monthKey), [monthKey]);
+  const [quickDateISO, setQuickDateISO] = useState(() => defaultQuickDate(initialSchedule.monthKey, monthDates(initialSchedule.monthKey)));
   const filteredEmployees = useMemo(() => {
     if (selectedEmployeeId === "ALL") {
       return employees;
@@ -109,6 +129,14 @@ export function AvailabilityStudio({ user, initialSchedule }: Props) {
     return employees.filter((employee) => employee.id === selectedEmployeeId);
   }, [employees, selectedEmployeeId]);
   const groups = useMemo(() => groupByHomeStore(filteredEmployees), [filteredEmployees]);
+  const selectedEmployee = useMemo(
+    () => (selectedEmployeeId === "ALL" ? null : employees.find((employee) => employee.id === selectedEmployeeId) ?? null),
+    [employees, selectedEmployeeId]
+  );
+  const selectedRule = useMemo(
+    () => (selectedEmployee ? rules.find((rule) => rule.employeeId === selectedEmployee.id) ?? null : null),
+    [rules, selectedEmployee]
+  );
 
   const stats = useMemo(() => {
     const counters: Record<AvailabilityStatus, number> = {
@@ -131,10 +159,69 @@ export function AvailabilityStudio({ user, initialSchedule }: Props) {
     return counters;
   }, [assignments, dates, employees]);
 
+  const selectedEmployeeHours = useMemo(() => {
+    if (!selectedEmployee) return 0;
+
+    const total = dates.reduce(
+      (sum, dateISO) =>
+        sum +
+        assignmentHours(
+          getEffectiveAssignmentForDate(selectedEmployee, dateISO, assignments[selectedEmployee.id]?.[dateISO] ?? null)
+        ),
+      0
+    );
+
+    return Number(total.toFixed(2));
+  }, [assignments, dates, selectedEmployee]);
+
+  const selectedEmployeeStats = useMemo(() => {
+    if (!selectedEmployee) {
+      return {
+        lavoro: 0,
+        riposo: 0,
+        malattia: 0,
+        permesso: 0,
+        non_lavorato: 0
+      };
+    }
+
+    return dates.reduce(
+      (acc, dateISO) => {
+        const status = getAvailabilityStatusForDate(
+          selectedEmployee,
+          dateISO,
+          assignments[selectedEmployee.id]?.[dateISO] ?? null,
+          { defaultToWork: true }
+        );
+
+        if (status) {
+          acc[status] += 1;
+        }
+
+        return acc;
+      },
+      {
+        lavoro: 0,
+        riposo: 0,
+        malattia: 0,
+        permesso: 0,
+        non_lavorato: 0
+      } as Record<AvailabilityStatus, number>
+    );
+  }, [assignments, dates, selectedEmployee]);
+
   function setMessageTimed(next: string) {
     setMessage(next);
     window.setTimeout(() => setMessage(""), 3200);
   }
+
+  useEffect(() => {
+    setQuickDateISO((current) => (current && dates.includes(current) ? current : defaultQuickDate(monthKey, dates)));
+  }, [dates, monthKey]);
+
+  useEffect(() => {
+    setEmployeeNote(selectedRule?.note ?? "");
+  }, [selectedRule?.id, selectedRule?.note, selectedEmployee?.id]);
 
   useEffect(() => {
     if (!initializedRef.current) {
@@ -148,6 +235,7 @@ export function AvailabilityStudio({ user, initialSchedule }: Props) {
         const data = await getSchedule(targetMonth);
         const nextEmployees = data.employees.filter((employee) => employee.active);
         setEmployees(nextEmployees);
+        setRules(data.rules);
         setAssignments(data.assignments);
         setSelectedEmployeeId((current) => (current === "ALL" || nextEmployees.some((employee) => employee.id === current) ? current : "ALL"));
         setSaveState("saved");
@@ -186,6 +274,55 @@ export function AvailabilityStudio({ user, initialSchedule }: Props) {
       setEmployees((current) => current.map((item) => (item.id === employee.id ? { ...item, availability: previousAvailability } : item)));
       setSaveState("error");
       setMessageTimed(error instanceof Error ? error.message : "Errore salvataggio disponibilita");
+    }
+  }
+
+  async function setStatus(employee: Employee, dateISO: string, nextStatus: AvailabilityStatus) {
+    if (readOnly) return;
+
+    const previousAvailability = employee.availability;
+    const nextAvailability = {
+      ...employee.availability,
+      [dateISO]: nextStatus
+    };
+
+    setSaveState("saving");
+    setEmployees((current) => current.map((item) => (item.id === employee.id ? { ...item, availability: nextAvailability } : item)));
+
+    try {
+      const updated = await updateEmployee({ id: employee.id, availability: nextAvailability });
+      setEmployees((current) => current.map((item) => (item.id === employee.id ? updated : item)));
+      setLastSavedAt(new Date(updated.updatedAt).toLocaleTimeString("it-IT"));
+      setSaveState("saved");
+      setMessageTimed(`${updated.fullName}: ${AVAILABILITY_LABELS[nextStatus]} impostato per ${parseISODate(dateISO).toLocaleDateString("it-IT", { day: "numeric", month: "long" })}`);
+    } catch (error) {
+      setEmployees((current) => current.map((item) => (item.id === employee.id ? { ...item, availability: previousAvailability } : item)));
+      setSaveState("error");
+      setMessageTimed(error instanceof Error ? error.message : "Errore salvataggio disponibilita");
+    }
+  }
+
+  async function saveSelectedNote() {
+    if (!selectedEmployee) return;
+
+    setNoteSaving(true);
+    try {
+      const savedRule = await upsertRule({
+        id: selectedRule?.id,
+        employeeId: selectedEmployee.id,
+        unavailableWeekdays: selectedRule?.unavailableWeekdays ?? [],
+        unavailableDates: selectedRule?.unavailableDates ?? [],
+        forbiddenShiftIds: selectedRule?.forbiddenShiftIds ?? [],
+        preferredShiftId: selectedRule?.preferredShiftId ?? null,
+        note: employeeNote.trim()
+      });
+
+      setRules((current) => [...current.filter((rule) => rule.employeeId !== selectedEmployee.id), savedRule]);
+      setMessageTimed(`Nota aggiornata per ${selectedEmployee.fullName}`);
+    } catch (error) {
+      setMessageTimed(error instanceof Error ? error.message : "Errore salvataggio nota");
+    } finally {
+      setNoteSaving(false);
     }
   }
 
@@ -286,10 +423,78 @@ export function AvailabilityStudio({ user, initialSchedule }: Props) {
           </div>
 
           <aside className={availabilityStyles.helperCard}>
-            <span className={availabilityStyles.helperTitle}>Nota rapida</span>
-            <p className={availabilityStyles.helperText}>
-              Qui lavori solo sugli stati del giorno. Per turni, ore e spostamenti tra negozi continui dalla voce `Pianificazione` nella sidebar.
-            </p>
+            {selectedEmployee ? (
+              <div className={availabilityStyles.employeeFocus}>
+                <div className={availabilityStyles.employeeFocusHeader}>
+                  <EmployeeAvatar fullName={selectedEmployee.fullName} photoUrl={selectedEmployee.photoUrl} size="md" />
+                  <div className={availabilityStyles.employeeFocusMeta}>
+                    <span className={availabilityStyles.helperTitle}>Scheda persona</span>
+                    <strong className={availabilityStyles.employeeFocusName}>{selectedEmployee.fullName}</strong>
+                    <span className={availabilityStyles.employeeFocusStore}>{STORE_LABELS[selectedEmployee.homeStore]} · {formatHours(selectedEmployeeHours)} h nel mese</span>
+                  </div>
+                </div>
+
+                <label className={studioStyles.field}>
+                  Giorno rapido
+                  <input className={studioStyles.input} type="date" value={quickDateISO} onChange={(event) => setQuickDateISO(event.target.value)} min={dates[0]} max={dates[dates.length - 1]} />
+                </label>
+
+                <div className={availabilityStyles.quickActions}>
+                  {STATUS_ORDER.map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      className={availabilityStyles.quickAction}
+                      style={{ background: STATUS_STYLE[status].background, borderColor: STATUS_STYLE[status].borderColor, color: STATUS_STYLE[status].color }}
+                      disabled={readOnly || !quickDateISO}
+                      onClick={() => void setStatus(selectedEmployee, quickDateISO, status)}
+                    >
+                      <span>{STATUS_STYLE[status].code}</span>
+                      <strong>{STATUS_STYLE[status].label}</strong>
+                    </button>
+                  ))}
+                </div>
+
+                <div className={availabilityStyles.focusStats}>
+                  <span className={availabilityStyles.tableStat}>{selectedEmployeeStats.lavoro} lavoro</span>
+                  <span className={availabilityStyles.tableStat}>{selectedEmployeeStats.riposo} riposi</span>
+                  <span className={availabilityStyles.tableStat}>{selectedEmployeeStats.permesso} permessi</span>
+                  <span className={availabilityStyles.tableStat}>{selectedEmployeeStats.malattia + selectedEmployeeStats.non_lavorato} assenze</span>
+                </div>
+
+                <label className={studioStyles.field}>
+                  Nota / cosa fa
+                  <textarea
+                    className={studioStyles.textarea}
+                    value={employeeNote}
+                    onChange={(event) => setEmployeeNote(event.target.value)}
+                    placeholder="Es. receptionist, colore, piega, supporto cassa, preferenze utili..."
+                    rows={4}
+                  />
+                </label>
+
+                <div className={studioStyles.actions}>
+                  <button type="button" className={studioStyles.button} disabled={noteSaving || readOnly} onClick={() => void saveSelectedNote()}>
+                    {noteSaving ? "Salvataggio..." : "Salva nota"}
+                  </button>
+                  <a
+                    href={`/stampa/${monthKey}?employeeId=${selectedEmployee.id}&ref=${quickDateISO || dates[0] || ""}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={studioStyles.secondaryButton}
+                  >
+                    Stampa scheda
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span className={availabilityStyles.helperTitle}>Scheda persona</span>
+                <p className={availabilityStyles.helperText}>
+                  Seleziona una persona dal filtro per vedere nota, ore del mese, azioni rapide come `Permesso` e la stampa dedicata.
+                </p>
+              </>
+            )}
           </aside>
         </div>
       </section>

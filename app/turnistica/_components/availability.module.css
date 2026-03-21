@@ -137,6 +137,88 @@
   gap: 12px;
 }
 
+.employeeFocus {
+  display: grid;
+  gap: 14px;
+}
+
+.employeeFocusHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.employeeFocusMeta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.employeeFocusName {
+  font-size: 1.06rem;
+  line-height: 1.2;
+  color: #241720;
+}
+
+.employeeFocusStore {
+  color: #7b6672;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quickAction {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  min-height: 68px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(217, 199, 209, 0.96);
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
+
+.quickAction:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(112, 67, 92, 0.08);
+}
+
+.quickAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  box-shadow: none;
+}
+
+.quickAction span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quickAction strong {
+  font-size: 0.94rem;
+  line-height: 1.2;
+}
+
+.focusStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 @media (max-width: 1100px) {
   .controlsGrid {
     grid-template-columns: 1fr;
@@ -151,5 +233,14 @@
 
   .statusChip {
     min-width: 0;
+  }
+
+  .employeeFocusHeader {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .quickActions {
+    grid-template-columns: 1fr;
   }
 }
