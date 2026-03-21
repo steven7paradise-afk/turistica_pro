@@ -286,6 +286,27 @@ function defaultStore(): StoredStore {
   };
 }
 
+function emptyScheduleData(monthKey: string): ScheduleData {
+  const month = normalizeMonth(monthKey, {
+    monthKey,
+    assignments: {},
+    versions: [],
+    auditLogs: []
+  });
+
+  return {
+    monthKey,
+    status: month.status,
+    version: month.version,
+    updatedAt: month.updatedAt,
+    publishedAt: month.publishedAt,
+    assignments: {},
+    employees: [],
+    templates: [],
+    rules: []
+  };
+}
+
 function photoUrl(employee: StoredEmployee): string | null {
   if (!employee.photoFileName) return null;
   return `/api/employees/photo?employeeId=${encodeURIComponent(employee.id)}&v=${employee.photoVersion}`;
@@ -914,50 +935,51 @@ async function resetStore(raw: string, reason: "empty" | "invalid") {
 }
 
 async function readStore(): Promise<StoredStore> {
-  if (databaseEnabled()) {
-    const row = await prisma.appState.findUnique({ where: { key: APP_STATE_KEY } });
+  try {
+    if (databaseEnabled()) {
+      const row = await prisma.appState.findUnique({ where: { key: APP_STATE_KEY } });
 
-    if (!row) {
-      const bootstrapped = await bootstrapDatabaseFromBundledLocalFiles();
-      if (bootstrapped) {
-        return bootstrapped;
+      if (!row) {
+        const bootstrapped = await bootstrapDatabaseFromBundledLocalFiles();
+        if (bootstrapped) {
+          return bootstrapped;
+        }
+
+        const fallback = defaultStore();
+        await writeStore(fallback);
+        return fallback;
       }
 
-      const fallback = defaultStore();
-      await writeStore(fallback);
-      return fallback;
+      const parsed = row.stateJson as Partial<StoredStore> | LegacyStore;
+      if (parsed && typeof parsed === "object" && "schemaVersion" in parsed && parsed.schemaVersion === 2) {
+        return normalizeStore(parsed);
+      }
+
+      return migrateLegacyStore(JSON.stringify(row.stateJson), parsed as LegacyStore);
     }
 
-    const parsed = row.stateJson as Partial<StoredStore> | LegacyStore;
-    if (parsed && typeof parsed === "object" && "schemaVersion" in parsed && parsed.schemaVersion === 2) {
-      return normalizeStore(parsed);
+    await ensureStorage();
+    const raw = await fs.readFile(STORE_FILE, "utf8").catch((error) => {
+      if (isReadonlyFsError(error) || (error && typeof error === "object" && "code" in error && error.code === "ENOENT")) {
+        return JSON.stringify(defaultStore());
+      }
+
+      throw error;
+    });
+
+    if (!raw.trim()) {
+      return resetStore(raw, "empty");
     }
 
-    return migrateLegacyStore(JSON.stringify(row.stateJson), parsed as LegacyStore);
-  }
-
-  await ensureStorage();
-  const raw = await fs.readFile(STORE_FILE, "utf8").catch((error) => {
-    if (isReadonlyFsError(error) || (error && typeof error === "object" && "code" in error && error.code === "ENOENT")) {
-      return JSON.stringify(defaultStore());
-    }
-
-    throw error;
-  });
-
-  if (!raw.trim()) {
-    return resetStore(raw, "empty");
-  }
-
-  try {
     const parsed = JSON.parse(raw) as Partial<StoredStore> | LegacyStore;
     if (parsed && typeof parsed === "object" && "schemaVersion" in parsed && parsed.schemaVersion === 2) {
       return normalizeStore(parsed);
     }
 
     return migrateLegacyStore(raw, parsed as LegacyStore);
-  } catch {
-    return resetStore(raw, "invalid");
+  } catch (error) {
+    console.error("readStore: fallback su archivio vuoto", error);
+    return defaultStore();
   }
 }
 
@@ -1195,21 +1217,28 @@ export function shouldUseLocalData() {
 }
 
 export async function getLocalSchedule(monthKey: string): Promise<ScheduleData> {
-  const store = await readStore();
-  const month = ensureMonth(store, monthKey);
-  await writeStore(store);
+  try {
+    const store = await readStore();
+    const month = ensureMonth(store, monthKey);
+    await writeStore(store).catch((error) => {
+      console.error("getLocalSchedule: impossibile salvare il mese iniziale", error);
+    });
 
-  return {
-    monthKey,
-    status: month.status,
-    version: month.version,
-    updatedAt: month.updatedAt,
-    publishedAt: month.publishedAt,
-    assignments: cloneMatrix(month.assignments),
-    employees: allEmployees(store, false),
-    templates: activeTemplates(store),
-    rules: allRules(store).filter((rule) => store.employees.some((employee) => employee.id === rule.employeeId && employee.active))
-  };
+    return {
+      monthKey,
+      status: month.status,
+      version: month.version,
+      updatedAt: month.updatedAt,
+      publishedAt: month.publishedAt,
+      assignments: cloneMatrix(month.assignments),
+      employees: allEmployees(store, false),
+      templates: activeTemplates(store),
+      rules: allRules(store).filter((rule) => store.employees.some((employee) => employee.id === rule.employeeId && employee.active))
+    };
+  } catch (error) {
+    console.error("getLocalSchedule: fallback su mese vuoto", error);
+    return emptyScheduleData(monthKey);
+  }
 }
 
 export async function listLocalShifts(
@@ -1435,18 +1464,23 @@ export async function publishLocalSchedule(monthKey: string, userName: string) {
 }
 
 export async function listLocalVersions(monthKey: string): Promise<ScheduleVersionItem[]> {
-  const store = await readStore();
-  const month = ensureMonth(store, monthKey);
+  try {
+    const store = await readStore();
+    const month = ensureMonth(store, monthKey);
 
-  return month.versions
-    .slice()
-    .sort((left, right) => right.versionNumber - left.versionNumber)
-    .map((version) => ({
-      id: version.id,
-      versionNumber: version.versionNumber,
-      createdAt: version.createdAt,
-      createdByName: version.createdByName
-    }));
+    return month.versions
+      .slice()
+      .sort((left, right) => right.versionNumber - left.versionNumber)
+      .map((version) => ({
+        id: version.id,
+        versionNumber: version.versionNumber,
+        createdAt: version.createdAt,
+        createdByName: version.createdByName
+      }));
+  } catch (error) {
+    console.error("listLocalVersions: fallback su cronologia vuota", error);
+    return [];
+  }
 }
 
 export async function restoreLocalVersion(versionId: string, userName: string) {
@@ -1480,8 +1514,13 @@ export async function listLocalAudit(monthKey: string, employeeId?: string) {
 }
 
 export async function listLocalEmployees(includeInactive = true): Promise<Employee[]> {
-  const store = await readStore();
-  return allEmployees(store, includeInactive);
+  try {
+    const store = await readStore();
+    return allEmployees(store, includeInactive);
+  } catch (error) {
+    console.error("listLocalEmployees: fallback su personale vuoto", error);
+    return [];
+  }
 }
 
 export async function createLocalEmployee(fullName: string, homeStore: Store = "duomo") {
