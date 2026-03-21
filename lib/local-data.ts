@@ -1606,6 +1606,66 @@ export async function deleteLocalEmployee(id: string) {
   return updateLocalEmployee(id, { active: false });
 }
 
+export async function permanentlyDeleteLocalEmployee(id: string, userName = "Paradise") {
+  const store = await readStore();
+  const employee = store.employees.find((item) => item.id === id);
+  if (!employee) {
+    throw new Error("Dipendente non trovato");
+  }
+
+  const deletedAt = nowIso();
+
+  await removePhotoVariants(id);
+
+  store.employees = store.employees.filter((item) => item.id !== id);
+  store.rules = store.rules.filter((rule) => rule.employeeId !== id);
+
+  Object.values(store.months).forEach((month) => {
+    let touched = false;
+
+    if (month.assignments[id]) {
+      delete month.assignments[id];
+      touched = true;
+    }
+
+    month.versions = month.versions.map((version) => {
+      if (!version.snapshot[id]) {
+        return version;
+      }
+
+      touched = true;
+      const nextSnapshot = cloneMatrix(version.snapshot);
+      delete nextSnapshot[id];
+
+      return {
+        ...version,
+        snapshot: nextSnapshot
+      };
+    });
+
+    const nextAuditLogs = month.auditLogs.filter((item) => item.payloadJson.employeeId !== id);
+    if (nextAuditLogs.length !== month.auditLogs.length) {
+      touched = true;
+      month.auditLogs = nextAuditLogs;
+    }
+
+    if (touched) {
+      month.version += 1;
+      month.updatedAt = deletedAt;
+      pushAudit(month, "EMPLOYEE_DELETED", userName, {
+        employeeId: id,
+        employeeName: employee.fullName,
+        deletedAt
+      });
+    }
+  });
+
+  store.updatedAt = deletedAt;
+  await writeStore(store);
+
+  return { ok: true as const, id, deletedAt };
+}
+
 export async function setLocalEmployeePhoto(id: string, buffer: Buffer, mimeType: string) {
   const store = await readStore();
   const employee = store.employees.find((item) => item.id === id);

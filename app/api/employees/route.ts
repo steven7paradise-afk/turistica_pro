@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/lib/api-auth";
-import { createLocalEmployee, deleteLocalEmployee, listLocalEmployees, updateLocalEmployee } from "@/lib/local-data";
+import { createLocalEmployee, deleteLocalEmployee, listLocalEmployees, permanentlyDeleteLocalEmployee, updateLocalEmployee } from "@/lib/local-data";
 
 export const dynamic = "force-dynamic";
 
@@ -77,5 +77,15 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "id obbligatorio" }, { status: 400 });
   }
 
-  return NextResponse.json(await deleteLocalEmployee(id));
+  const permanent = request.nextUrl.searchParams.get("permanent");
+
+  try {
+    if (permanent === "1" || permanent === "true") {
+      return NextResponse.json(await permanentlyDeleteLocalEmployee(id, auth.session.user.name));
+    }
+
+    return NextResponse.json(await deleteLocalEmployee(id));
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Errore eliminazione dipendente" }, { status: 404 });
+  }
 }

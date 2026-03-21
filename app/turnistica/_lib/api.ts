@@ -226,6 +226,10 @@ export async function deleteEmployee(id: string) {
   return parse<Employee>(await fetch(`/api/employees?id=${id}`, { method: "DELETE" }));
 }
 
+export async function permanentlyDeleteEmployee(id: string) {
+  return parse<{ ok: true; id: string; deletedAt: string }>(await fetch(`/api/employees?id=${id}&permanent=1`, { method: "DELETE" }));
+}
+
 export async function importFile(file: File) {
   const formData = new FormData();
   formData.set("file", file);

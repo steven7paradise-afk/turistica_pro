@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { createEmployee, deleteEmployee, getEmployees, removeEmployeePhoto, updateEmployee, uploadEmployeePhoto } from "@/app/turnistica/_lib/api";
+import { createEmployee, deleteEmployee, getEmployees, permanentlyDeleteEmployee, removeEmployeePhoto, updateEmployee, uploadEmployeePhoto } from "@/app/turnistica/_lib/api";
 import type { Employee, Store } from "@/app/turnistica/_lib/types";
 import { EmployeeAvatar } from "@/app/turnistica/_components/EmployeeAvatar";
 import { STORE_LABELS } from "@/app/turnistica/_lib/utils";
@@ -106,6 +106,25 @@ export function PeopleStudio({ initialEmployees }: Props) {
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Errore aggiornamento stato");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onPermanentDelete(employee: Employee) {
+    const confirmed = window.confirm(
+      `Eliminare definitivamente ${employee.fullName}?\n\nQuesta azione rimuove persona, foto e dati collegati anche dal database.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setBusyId(employee.id);
+      await permanentlyDeleteEmployee(employee.id);
+      setMessage("Persona eliminata definitivamente");
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Errore eliminazione definitiva");
     } finally {
       setBusyId(null);
     }
@@ -264,7 +283,7 @@ export function PeopleStudio({ initialEmployees }: Props) {
           <header className={styles.panelHeader}>
             <div>
               <h3 className={styles.panelTitle}>Team attuale</h3>
-              <p className={styles.panelSubtitle}>Ogni scheda mostra identità visiva, stato e comandi per rinominare, archiviare o aggiornare il ritratto.</p>
+              <p className={styles.panelSubtitle}>Ogni scheda mostra identità visiva, stato e comandi per rinominare, archiviare, eliminare o aggiornare il ritratto.</p>
             </div>
             <span className={styles.badge}>{employees.length} elementi</span>
           </header>
@@ -351,6 +370,9 @@ export function PeopleStudio({ initialEmployees }: Props) {
                             </button>
                             <button type="button" className={styles.dangerButton} disabled={busyId === employee.id} onClick={() => onToggleActive(employee)}>
                               {employee.active ? "Archivia" : "Riattiva"}
+                            </button>
+                            <button type="button" className={styles.dangerButton} disabled={busyId === employee.id} onClick={() => void onPermanentDelete(employee)}>
+                              Elimina
                             </button>
                           </div>
                         </li>
