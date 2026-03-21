@@ -4,11 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import styles from "@/app/turnistica/_components/turnistica-shell.module.css";
-import { NetworkAddress, SessionUser } from "@/app/turnistica/_lib/types";
+import { SessionUser } from "@/app/turnistica/_lib/types";
 
 type Props = {
   user: SessionUser;
-  networkAddresses: NetworkAddress[];
   logoutEnabled: boolean;
   children: React.ReactNode;
 };
@@ -27,7 +26,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function TurnisticaShell({ user, networkAddresses, logoutEnabled, children }: Props) {
+export function TurnisticaShell({ user, logoutEnabled, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -96,26 +95,6 @@ export function TurnisticaShell({ user, networkAddresses, logoutEnabled, childre
             );
           })}
         </nav>
-
-        <div className={styles.infoCard}>
-          <span className={styles.infoLabel}>Server locale</span>
-          <strong className={styles.infoValue}>Rete del salone</strong>
-          <p className={styles.infoText}>Il codice di accesso resta privato. Da qui vedi solo gli indirizzi utili per aprire l'app sugli altri dispositivi della stessa rete locale.</p>
-          {networkAddresses.length > 0 ? (
-            <div className={styles.networkList}>
-              {networkAddresses.map((address) => (
-                <a key={address.url} href={address.url} className={styles.networkLink}>
-                  <span>{address.label}</span>
-                  <strong>{address.url}</strong>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.networkList}>
-              <span className={styles.networkFallback}>Avvia il server locale su `0.0.0.0:3001` per aprire l'app dalla rete del salone.</span>
-            </div>
-          )}
-        </div>
 
         <div className={styles.userCard}>
           <div>

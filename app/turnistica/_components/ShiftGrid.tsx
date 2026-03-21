@@ -1,4 +1,4 @@
-import { Dispatch, MouseEvent, RefObject, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { Dispatch, MouseEvent, RefObject, SetStateAction, WheelEvent, useEffect, useMemo, useRef, useState } from "react";
 import styles from "@/app/turnistica/turnistica.module.css";
 import { EmployeeAvatar } from "@/app/turnistica/_components/EmployeeAvatar";
 import { Employee, EmployeeRule, ShiftAssignment, ShiftTemplate, Store } from "@/app/turnistica/_lib/types";
@@ -270,6 +270,22 @@ function ScreenTable(
     });
   }
 
+  function handleHorizontalWheel(event: WheelEvent<HTMLDivElement>) {
+    if (!event.altKey) {
+      return;
+    }
+
+    const wrapper = event.currentTarget;
+    const delta = event.deltaX !== 0 ? event.deltaX : event.deltaY;
+
+    if (delta === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    wrapper.scrollLeft += delta * 1.35;
+  }
+
   useEffect(() => {
     return () => {
       if (clickTimerRef.current) {
@@ -323,7 +339,11 @@ function ScreenTable(
       </div>
 
       <div className={`${styles.tableShell} tp-table-shell`}>
-        <div className={`${styles.tableWrap} tp-table-wrap`}>
+        <div
+          className={`${styles.tableWrap} tp-table-wrap`}
+          onWheel={handleHorizontalWheel}
+          aria-label="Griglia mensile turni. Usa Alt più rotella del mouse per scorrere orizzontalmente fino a fine calendario."
+        >
           <div className={styles.storeMatrix}>
             {groups.map((group) => (
               <section key={group.key} className={styles.storeTableSection}>

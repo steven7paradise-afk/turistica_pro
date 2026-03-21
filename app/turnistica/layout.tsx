@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { TurnisticaShell } from "@/app/turnistica/_components/TurnisticaShell";
 import { getAppSession, isLoginDisabled } from "@/lib/auth";
-import { getLocalNetworkAddresses } from "@/lib/network";
 import "./print.css";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +13,7 @@ export default async function TurnisticaLayout({ children }: { children: React.R
   }
 
   return (
-    <TurnisticaShell user={session.user} networkAddresses={getLocalNetworkAddresses()} logoutEnabled={!isLoginDisabled()}>
+    <TurnisticaShell user={session.user} logoutEnabled={!isLoginDisabled()}>
       {children}
     </TurnisticaShell>
   );
