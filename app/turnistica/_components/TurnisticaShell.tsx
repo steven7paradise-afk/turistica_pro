@@ -9,6 +9,7 @@ import { NetworkAddress, SessionUser } from "@/app/turnistica/_lib/types";
 type Props = {
   user: SessionUser;
   networkAddresses: NetworkAddress[];
+  logoutEnabled: boolean;
   children: React.ReactNode;
 };
 
@@ -26,7 +27,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function TurnisticaShell({ user, networkAddresses, children }: Props) {
+export function TurnisticaShell({ user, networkAddresses, logoutEnabled, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
@@ -118,13 +119,15 @@ export function TurnisticaShell({ user, networkAddresses, children }: Props) {
 
         <div className={styles.userCard}>
           <div>
-            <span className={styles.userLabel}>Sessione attiva</span>
+            <span className={styles.userLabel}>{logoutEnabled ? "Sessione attiva" : "Accesso diretto"}</span>
             <strong className={styles.userName}>{user.name}</strong>
             <span className={styles.userRole}>{user.role}</span>
           </div>
-          <button type="button" className={styles.logout} onClick={onLogout} disabled={loggingOut}>
-            {loggingOut ? "Uscita..." : "Esci"}
-          </button>
+          {logoutEnabled ? (
+            <button type="button" className={styles.logout} onClick={onLogout} disabled={loggingOut}>
+              {loggingOut ? "Uscita..." : "Esci"}
+            </button>
+          ) : null}
         </div>
       </aside>
 

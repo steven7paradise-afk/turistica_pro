@@ -6,6 +6,7 @@ import type { SessionUser } from "@/app/turnistica/_lib/types";
 const COOKIE_NAME = "turnistica_paradise_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 const SIMPLE_PIN = process.env.SIMPLE_PIN || "190326";
+const LOGIN_DISABLED = process.env.PARADISE_DISABLE_LOGIN !== "0";
 const SESSION_SECRET =
   process.env.PARADISE_SESSION_SECRET || process.env.NEXTAUTH_SECRET || "turnistica-paradise-local-session-secret";
 
@@ -71,6 +72,10 @@ function sessionCookieOptions() {
 }
 
 export function validatePin(pin: string): boolean {
+  if (LOGIN_DISABLED) {
+    return true;
+  }
+
   return pin.trim() === SIMPLE_PIN;
 }
 
@@ -96,6 +101,10 @@ export function createLogoutResponse() {
 }
 
 export async function getAppSession(): Promise<{ user: SessionUser } | null> {
+  if (LOGIN_DISABLED) {
+    return { user: SESSION_USER };
+  }
+
   const token = cookies().get(COOKIE_NAME)?.value;
   const payload = decode(token);
   if (!payload) {
@@ -109,4 +118,8 @@ export async function getAppSession(): Promise<{ user: SessionUser } | null> {
       role: payload.role
     }
   };
+}
+
+export function isLoginDisabled(): boolean {
+  return LOGIN_DISABLED;
 }
