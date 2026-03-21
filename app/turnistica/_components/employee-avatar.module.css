@@ -1,0 +1,62 @@
+.root {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--avatar-start), var(--avatar-end));
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 12px 24px rgba(43, 22, 34, 0.14);
+}
+
+.sm {
+  width: 34px;
+  height: 34px;
+}
+
+.md {
+  width: 52px;
+  height: 52px;
+}
+
+.lg {
+  width: 84px;
+  height: 84px;
+}
+
+.print {
+  width: 24px;
+  height: 24px;
+  border-width: 1px;
+  box-shadow: none;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fallback {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.sm .fallback {
+  font-size: 0.72rem;
+}
+
+.md .fallback {
+  font-size: 0.92rem;
+}
+
+.lg .fallback {
+  font-size: 1.25rem;
+}
+
+.print .fallback {
+  font-size: 0.62rem;
+}
