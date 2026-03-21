@@ -219,6 +219,26 @@ const PRINT_CODE_MAP: Record<string, ShiftId> = {
 
 let writeQueue: Promise<void> = Promise.resolve();
 
+function firstEnv(...keys: string[]) {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function isReadonlyFsError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code) : "";
+  return code === "EROFS" || code === "EPERM";
+}
+
 function databaseEnabled() {
   const mode = process.env.PARADISE_STORAGE_MODE?.trim().toLowerCase();
 
@@ -230,7 +250,19 @@ function databaseEnabled() {
     return true;
   }
 
-  return Boolean(process.env.NETLIFY && (process.env.DATABASE_URL || process.env.DIRECT_URL));
+  return Boolean(
+    firstEnv(
+      "DATABASE_URL",
+      "DIRECT_URL",
+      "POSTGRES_PRISMA_URL",
+      "POSTGRES_URL",
+      "POSTGRES_URL_NON_POOLING",
+      "SUPABASE_DATABASE_URL",
+      "SUPABASE_DIRECT_URL",
+      "NETLIFY_DATABASE_URL",
+      "NETLIFY_DATABASE_URL_UNPOOLED"
+    )
+  );
 }
 
 function toPrismaJson(value: StoredStore): Prisma.InputJsonValue {
@@ -535,13 +567,23 @@ async function ensureStorage() {
     return;
   }
 
-  await fs.mkdir(STORE_DIR, { recursive: true });
-  await fs.mkdir(PHOTO_DIR, { recursive: true });
-
   try {
     await fs.access(STORE_FILE);
+    return;
   } catch {
+    // Continue and try to initialize local storage.
+  }
+
+  try {
+    await fs.mkdir(STORE_DIR, { recursive: true });
+    await fs.mkdir(PHOTO_DIR, { recursive: true });
     await fs.writeFile(STORE_FILE, JSON.stringify(defaultStore(), null, 2), "utf8");
+  } catch (error) {
+    if (isReadonlyFsError(error)) {
+      return;
+    }
+
+    throw error;
   }
 }
 
@@ -576,7 +618,13 @@ async function backupRawContent(raw: string, reason: string) {
   if (databaseEnabled()) return;
   if (!raw.trim()) return;
   const backupPath = STORE_FILE.replace(/\.json$/, `.${reason}.${Date.now()}.backup.json`);
-  await fs.writeFile(backupPath, raw, "utf8");
+  try {
+    await fs.writeFile(backupPath, raw, "utf8");
+  } catch (error) {
+    if (!isReadonlyFsError(error)) {
+      throw error;
+    }
+  }
 }
 
 function extFromMime(mimeType: string): string {
@@ -855,7 +903,13 @@ async function bootstrapDatabaseFromBundledLocalFiles(): Promise<StoredStore | n
 async function resetStore(raw: string, reason: "empty" | "invalid") {
   await backupRawContent(raw, reason);
   const fallback = defaultStore();
-  await writeStore(fallback);
+  try {
+    await writeStore(fallback);
+  } catch (error) {
+    if (!isReadonlyFsError(error)) {
+      throw error;
+    }
+  }
   return fallback;
 }
 
@@ -883,7 +937,13 @@ async function readStore(): Promise<StoredStore> {
   }
 
   await ensureStorage();
-  const raw = await fs.readFile(STORE_FILE, "utf8");
+  const raw = await fs.readFile(STORE_FILE, "utf8").catch((error) => {
+    if (isReadonlyFsError(error) || (error && typeof error === "object" && "code" in error && error.code === "ENOENT")) {
+      return JSON.stringify(defaultStore());
+    }
+
+    throw error;
+  });
 
   if (!raw.trim()) {
     return resetStore(raw, "empty");
