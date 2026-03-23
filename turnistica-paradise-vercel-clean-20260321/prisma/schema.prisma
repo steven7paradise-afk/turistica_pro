@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum ScheduleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model User {
+  id           String          @id @default(cuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  role         Role
+  active       Boolean         @default(true)
+  auditLogs    AuditLog[]
+  versions     ScheduleVersion[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Employee {
+  id          String               @id @default(cuid())
+  fullName    String               @unique
+  active      Boolean              @default(true)
+  rules       EmployeeRule[]
+  assignments ScheduleAssignment[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model ShiftTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  startTime String
+  endTime   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmployeeRule {
+  id                String   @id @default(cuid())
+  employeeId        String
+  employee          Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  unavailableDays   Int[]
+  forbiddenShiftIds String[]
+  preferredShiftId  String?
+  note              String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([employeeId])
+}
+
+model ScheduleMonth {
+  id          String               @id @default(cuid())
+  monthKey    String               @unique
+  status      ScheduleStatus       @default(DRAFT)
+  version     Int                  @default(1)
+  updatedAt   DateTime             @updatedAt
+  assignments ScheduleAssignment[]
+  versions    ScheduleVersion[]
+  auditLogs   AuditLog[]
+}
+
+model ScheduleAssignment {
+  id              String        @id @default(cuid())
+  scheduleMonthId String
+  scheduleMonth   ScheduleMonth @relation(fields: [scheduleMonthId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dateISO         String
+  assignmentJson  Json
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([scheduleMonthId, employeeId, dateISO])
+  @@index([employeeId, dateISO])
+}
+
+model ScheduleVersion {
+  id              String        @id @default(cuid())
+  scheduleMonthId String
+  scheduleMonth   ScheduleMonth @relation(fields: [scheduleMonthId], references: [id], onDelete: Cascade)
+  versionNumber   Int
+  snapshotJson    Json
+  createdById     String?
+  createdBy       User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime      @default(now())
+
+  @@unique([scheduleMonthId, versionNumber])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id              String        @id @default(cuid())
+  scheduleMonthId String
+  scheduleMonth   ScheduleMonth @relation(fields: [scheduleMonthId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action          String
+  payloadJson     Json
+  createdAt       DateTime      @default(now())
+
+  @@index([scheduleMonthId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AppState {
+  key       String   @id
+  stateJson Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmployeePhoto {
+  employeeId String   @id
+  mimeType   String
+  dataBase64 String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

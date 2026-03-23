@@ -1,0 +1,109 @@
+:root {
+  color-scheme: light;
+  --font-body: "Manrope", "Helvetica Neue", "Segoe UI", sans-serif;
+  --font-display: "Cormorant Garamond", "Baskerville", "Palatino Linotype", serif;
+  --bg-app: #f6f0f2;
+  --bg-app-strong: #efe3e6;
+  --fg: #1d1418;
+  --fg-soft: #69595f;
+  --line-soft: #e6d8dd;
+  --line-strong: #d7c1c9;
+  --card-bg: rgba(255, 252, 252, 0.94);
+  --card-shadow: 0 28px 72px rgba(75, 38, 54, 0.12);
+  --pink-strong: #8f234f;
+  --pink-main: #b83d71;
+  --pink-soft: #f4e1e8;
+  --pink-powder: #edd4de;
+  --rose-deep: #432130;
+  --wine-deep: #2f1823;
+  --champagne-line: rgba(182, 151, 118, 0.22);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: var(--font-body);
+  color: var(--fg);
+  background:
+    radial-gradient(circle at top left, rgba(200, 115, 158, 0.18) 0%, rgba(200, 115, 158, 0.05) 24%, transparent 40%),
+    radial-gradient(circle at right 12% top 24%, rgba(91, 37, 58, 0.08) 0%, rgba(91, 37, 58, 0.02) 18%, transparent 34%),
+    radial-gradient(circle at bottom right, rgba(233, 204, 216, 0.42) 0%, rgba(233, 204, 216, 0.08) 28%, transparent 48%),
+    linear-gradient(180deg, #fbf7f8 0%, #f7f0f3 38%, var(--bg-app) 100%);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(20px);
+}
+
+body::before {
+  inset: 0 auto auto -140px;
+  width: 340px;
+  height: 340px;
+  background: radial-gradient(circle, rgba(186, 95, 141, 0.22) 0%, rgba(186, 95, 141, 0.06) 42%, rgba(186, 95, 141, 0) 72%);
+}
+
+body::after {
+  inset: auto -120px 40px auto;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(126, 69, 93, 0.18) 0%, rgba(126, 69, 93, 0.05) 40%, rgba(126, 69, 93, 0) 74%);
+}
+
+main {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(168, 62, 108, 0.92);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: rgba(168, 62, 108, 0.2);
+}

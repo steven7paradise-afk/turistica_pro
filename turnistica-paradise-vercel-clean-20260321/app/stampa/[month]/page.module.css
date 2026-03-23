@@ -1,0 +1,437 @@
+@page {
+  size: A4 landscape;
+  margin: 8mm;
+}
+
+.page {
+  --print-scale: 1;
+  --work: #ffffff;
+  --rest: #dbeed6;
+  --notWorked: #f4c8c8;
+  --sick: #f7edb1;
+  --permit: #d9e6f5;
+  --line: #dfccd7;
+  --lineSoft: #ead9e3;
+  --ink: #241720;
+  --muted: #7d6874;
+
+  min-height: 100vh;
+  background: #f7f1f5;
+  color: var(--ink);
+  padding: 24px;
+}
+
+.sheetViewport {
+  width: min(100%, 281mm);
+  margin: 0 auto;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin: 0 auto 20px;
+  max-width: 1500px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(228, 210, 220, 0.98);
+  box-shadow: 0 18px 40px rgba(112, 67, 92, 0.1);
+}
+
+.toolbarText {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.toolbarActions {
+  display: flex;
+  gap: 10px;
+}
+
+.toolbarButton,
+.toolbarButtonSecondary {
+  border-radius: 999px;
+  padding: 12px 18px;
+  border: 1px solid rgba(214, 191, 205, 0.98);
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.toolbarButton {
+  border-color: transparent;
+  background: linear-gradient(145deg, #f05ea9, #bb2f79);
+  color: #ffffff;
+}
+
+.sheet {
+  width: min(100%, 281mm);
+  max-width: 281mm;
+  margin: 0 auto;
+  padding: 12px 14px 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 54px rgba(112, 67, 92, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.brandBlock {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff8fb;
+  padding: 10px 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.brandMark {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #ed6ab0, #b5327c);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+
+.kicker {
+  display: block;
+  color: #8b6f7c;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.22rem;
+  letter-spacing: 0.04em;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  width: 100%;
+}
+
+.focusStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  margin: 0 0 10px;
+}
+
+.focusChip,
+.focusNote {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff8fb;
+  color: var(--ink);
+  min-height: 34px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.focusNote {
+  max-width: min(100%, 560px);
+  border-radius: 18px;
+  justify-content: flex-start;
+  text-align: left;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.legendChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.tableWrap {
+  border: 1px solid var(--line);
+  overflow: hidden;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.storeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.storeSectionRow td {
+  background: #fff8fb;
+}
+
+.storeSectionCell {
+  padding: 6px 8px !important;
+}
+
+.storeTitle,
+.storeCount {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.storeTitle {
+  background: #fff0f6;
+  color: #9d2e65;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.storeCount {
+  background: #fff9fc;
+  color: #7c6470;
+  border: 1px solid var(--line);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.68rem;
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--lineSoft);
+  padding: 3px;
+  text-align: center;
+}
+
+.table thead th {
+  background: #faeef4;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.employeeHead,
+.employeeCell {
+  width: 108px;
+  min-width: 108px;
+  max-width: 108px;
+  text-align: left;
+}
+
+.employeeName {
+  display: block;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.dayHead {
+  width: 25px;
+}
+
+.weekend {
+  background: #f8f1f5;
+}
+
+.hoursHead,
+.hoursCell {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+}
+
+.label {
+  display: inline-flex;
+  width: 100%;
+  min-height: 18px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(197, 173, 186, 0.9);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.note {
+  margin-top: 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.74rem;
+  width: 100%;
+}
+
+@media print {
+  .page {
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: auto;
+    overflow: hidden;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .toolbar {
+    display: none !important;
+  }
+
+  .sheetViewport {
+    width: 281mm;
+    height: 194mm;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .sheet {
+    width: calc(281mm / var(--print-scale));
+    max-width: calc(281mm / var(--print-scale));
+    margin: 0 auto;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    align-items: center;
+    zoom: var(--print-scale);
+    transform-origin: top center;
+  }
+
+  .header {
+    margin: 0 0 2.5mm;
+  }
+
+  .brandBlock {
+    padding: 2.3mm 3mm;
+  }
+
+  .brandMark {
+    width: 11mm;
+    height: 11mm;
+    border-radius: 4mm;
+    font-size: 9pt;
+  }
+
+  .kicker {
+    font-size: 7pt;
+    margin-bottom: 1mm;
+  }
+
+  .title {
+    font-size: 11.2pt;
+    line-height: 1.1;
+  }
+
+  .legendRow {
+    gap: 2mm;
+    margin-bottom: 2mm;
+    font-size: 6.3pt;
+  }
+
+  .focusStrip {
+    gap: 2mm;
+    margin-bottom: 2.4mm;
+  }
+
+  .focusChip,
+  .focusNote {
+    min-height: auto;
+    padding: 1.2mm 2mm;
+    font-size: 6.2pt;
+  }
+
+  .focusNote {
+    max-width: 110mm;
+    border-radius: 3mm;
+  }
+
+  .legendChip {
+    padding: 1.1mm 1.8mm;
+    font-size: 6.2pt;
+  }
+
+  .storeTitle,
+  .storeCount {
+    padding: 1mm 1.6mm;
+    font-size: 6.1pt;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.65mm;
+    font-size: 6.1pt;
+  }
+
+  .dayHead {
+    width: 5.8mm;
+    font-size: 5.4pt;
+  }
+
+  .employeeHead,
+  .employeeCell {
+    width: 25mm;
+    min-width: 25mm;
+    max-width: 25mm;
+  }
+
+  .hoursHead,
+  .hoursCell {
+    width: 9mm;
+    min-width: 9mm;
+    max-width: 9mm;
+    font-size: 5.8pt;
+  }
+
+  .employeeName {
+    font-size: 5.8pt;
+  }
+
+  .label {
+    min-height: auto;
+    padding: 0.55mm 0.3mm;
+    font-size: 5.5pt;
+  }
+
+  .note {
+    margin-top: 1.8mm;
+    font-size: 5.8pt;
+  }
+}
